@@ -1,0 +1,57 @@
+# Listens for specific comments in PRs and triggers a build
+
+name: Build Trigger
+
+on: issue_comment
+
+jobs:
+  building_reaction:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              comment_id: context.payload.comment.id,
+              content: 'ROCKET'
+            })
+
+  prerelease_deploy:
+    name: deploy to pre-release
+    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'deploy to pre-release') }}
+    uses: ./.github/workflows/build.yml@${{ github.event.pull_request.base.ref }}
+    secrets: inherit
+    with:
+      environment: pre-release
+  dev_deploy:
+    name: deploy to dev
+    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'deploy to dev') }}
+    uses: ./.github/workflows/build.yml@${{ github.event.pull_request.base.ref }}
+    secrets: inherit
+    with:
+      environment: dev
+  # Not doing prod-deploy - merge to main first
+
+  # respond with a thumbs up
+  done_prerelease:
+    runs-on: ubuntu-latest
+    needs: prerelease_deploy
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            })
+  done_dev:
+    runs-on: ubuntu-latest
+    needs: dev_deploy
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            })
