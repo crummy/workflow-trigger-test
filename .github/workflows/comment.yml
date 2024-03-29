@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
       # could we combine these into one? i don't know how...
       - id: 'get-branch'
-        run: echo ::set-output name=branch::$(gh pr view $PR_NO --repo $REPO --json headRefName --jq '.headRefName')
+        run: echo "name=branch::$(gh pr view $PR_NO --repo $REPO --json headRefName --jq '.headRefName')" >> "$GITHUB_OUTPUT"
         env:
           REPO: ${{ github.repository }}
           PR_NO: ${{ github.event.issue.number }}
