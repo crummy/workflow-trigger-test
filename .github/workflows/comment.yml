@@ -5,53 +5,32 @@ name: Build Trigger
 on: issue_comment
 
 jobs:
-  building_reaction:
+  listen_for_deploys:
+    if: ${{ github.event.issue.pull_request && (github.event.comment.body == 'deploy to pre-release' || github.event.comment.body == 'deploy to dev') }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/github-script@v7
+      - name: rocket
+        uses: actions/github-script@v7
         with:
           script: |
             github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               comment_id: context.payload.comment.id,
-              content: 'ROCKET'
+              content: 'rocket'
             })
 
-  prerelease_deploy:
-    name: deploy to pre-release
-    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'deploy to pre-release') }}
-    uses: ./.github/workflows/build.yml@${{ github.event.pull_request.base.ref }}
-    secrets: inherit
-    with:
-      environment: pre-release
-  dev_deploy:
-    name: deploy to dev
-    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, 'deploy to dev') }}
-    uses: ./.github/workflows/build.yml@${{ github.event.pull_request.base.ref }}
-    secrets: inherit
-    with:
-      environment: dev
-  # Not doing prod-deploy - merge to main first
-
-  # respond with a thumbs up
-  done_prerelease:
-    runs-on: ubuntu-latest
-    needs: prerelease_deploy
-    steps:
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.reactions.createForIssueComment({
-              comment_id: context.payload.comment.id,
-              content: '+1'
-            })
-  done_dev:
-    runs-on: ubuntu-latest
-    needs: dev_deploy
-    steps:
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.reactions.createForIssueComment({
-              comment_id: context.payload.comment.id,
-              content: '+1'
-            })
+      - name: Checkout
+        uses: actions/checkout@v4
+      # could we combine these into one? i don't know how...
+      - name: deploy to pre-release
+        if: ${{ github.event.issue.pull_request && github.event.comment.body == 'deploy to pre-release' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build.yml -f environment=pre-release --ref refs/pull/${{ github.event.issue.number }}/head
+      - name: deploy to dev
+        if: ${{ github.event.issue.pull_request && github.event.comment.body == 'deploy to dev' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build.yml -f environment=dev --ref refs/pull/${{ github.event.issue.number }}/head
+      # Not doing prod-deploy - merge to main first
