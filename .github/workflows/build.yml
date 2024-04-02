@@ -1,21 +1,5 @@
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        type: string
-        required: true
   push:
-  workflow_call:
-    inputs:
-      environment:
-        type: string
-        required: true
-
-jobs:
-  auto-deploy:
-    uses: ./.github/workflows/deploy.yml@main
-    with:
-      environment: pre-release
 
   check-docker-compose:
     runs-on: ubuntu-latest
